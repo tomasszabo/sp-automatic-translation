@@ -32,15 +32,41 @@ By default, each translation must be translated and published manually. By creat
 
 Enable SharePoint multilingual feature as defined in [documentation](https://support.microsoft.com/en-us/office/create-multilingual-communication-sites-pages-and-news-2bb7d610-5453-41c6-a0e8-6f40b3ed750c).
 
-Note down your SharePoint tenant (domain) e.g., `xyz.onmicrosoft.com`.
+Note down your SharePoint tenant e.g., `xyz.onmicrosoft.com`.
 
 ### 2. Azure Active Directory application registration
 
-Add application registration as defined in [documentation](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview/appId/0877c145-15b7-4786-9876-961590bdaefb/isMSAApp/). This app registration will be used by Azure Function App to connect to SharePoint and read/write translated site pages.
+#### Interactive way
+
+Add application registration as defined in [documentation](https://docs.microsoft.com/en-us/sharepoint/dev/solution-guidance/security-apponly-azuread). This app registration will be used by Azure Function App to connect to SharePoint and read/write translated site pages.
 
 > **_NOTE:_** Certificate is needed to access SharePoint from Azure Function App, Password is not enough.
 
 Once app registration and certificate is created, go to this registration and note down `Application (client) Id` (to be found in `Application > Overview`) and save Certificate used in credentials.
+
+Go to `Manage > API Permissions` and check if sucessful right are delegated to app registration.
+
+#### Command line way
+
+Add application registration using following PowerShell commands from [PnP PowerShell](https://pnp.github.io/powershell/articles/authentication.html#setting-up-access-to-your-own-azure-ad-app) module.
+
+First install PnP PowerShell module:
+
+```PowerShell
+Install-Module -Name "PnP.PowerShell"
+```
+
+Then add application registration and follow the instruction:
+
+```PowerShell
+$result = Register-PnPAzureADApp -ApplicationName "YOUR_APP_NAME" -Tenant YOURTENANT.onmicrosoft.com -OutPath c:\mycertificates -DeviceLogin
+```
+
+Last, display and note down base 64 encoded certificates private key:
+
+```PowerShell
+$result.Base64Encoded
+```
 
 ## 3. Azure Translator
 
@@ -71,12 +97,12 @@ Once Function App is deployed, go to this resource in Azure Portal, select `Sett
 Property | Value
 ---|---
 ClientId|`Application (client) Id` from [AD application registration](#2-azure-active-directory-application-registration)
-ClientSecret|Base64 encoded certificate's PFX file with private key from [AD application registration](#2-azure-active-directory-application-registration)
+ClientSecret|Base64 encoded certificate's PFX file with private key or PnpPowerShell registration Base64 encoded private key  from [AD application registration](#2-azure-active-directory-application-registration) step
 TranslatorKey|`Key` from [Translator](#3-azure-translator)
 TranslatorRegion|`Location/Region` from [Translator](#3-azure-translator)
-Tenant|SharePoint tenant/domain (e.g. `xyz.onmicrosoft.com`)
+Tenant|SharePoint tenant (e.g. `xyz.onmicrosoft.com`)
 
-Open `Functions > App files` and select `requirements.psd1` from select box. Copy code from [`functions/requirements.psd1`](functions/requirements.psd1) and paste it into Azure Portal.
+Open `Functions > App files` and select `requirements.psd1` from select box. Copy code from [`function/requirements.psd1`](function/requirements.psd1) and paste it into Azure Portal.
 
 > **_NOTE:_** Don't forget to save changes.
 
@@ -96,9 +122,9 @@ Once function is created, function detail will be automatically opened. In `Over
 
 ### Function Code
 
-Open `Developer > Code + Test` and select `run.ps1` from select box. Copy code from [`functions/run.ps1`](functions/run.ps1) and paste it into Azure Portal.
+Open `Developer > Code + Test` and select `run.ps1` from select box. Copy code from [`function/run.ps1`](function/run.ps1) and paste it into Azure Portal.
 
-Choose `function.json` from select box and copy code from [`functions/function.json`](functions/function.json) and paste it into Azure Portal.
+Choose `function.json` from select box and copy code from [`function/function.json`](function/function.json) and paste it into Azure Portal.
 
 > **_NOTE:_** Don't forget to save changes.
 
@@ -152,7 +178,7 @@ replace(replace(triggerBody()?['{Path}'],'SitePages',''),'/','')
 
 Let's prepare JSON input for our [Azure Function App](#4-azure-function-app). Input has following structure:
 
-```
+```JSON
 {
 	"language": "language-code-extracted-in-previous-step",
 	"pageTitle": "name-of-a-site-page",
@@ -183,7 +209,7 @@ Body|Output from previous step
 
 # Run
 
-When everything is installed and configured, now in a Site Page when clicking on `Translate` button in top menu, dialog with translations will open. 
+When everything is installed and configured, now in SharePoint site page when clicking on `Translate` button in top menu, dialog with translations will open. 
 
 Clicking on `Create` for given language will create a copy of current site page and initiate automatic translation. 
 
@@ -195,7 +221,7 @@ Go to SharePoint flow to access logs of the flow or to Azure Function and select
 
 # Limitations
 
-SharePoint multilingual feature is available only for Community Sites (not for Team Sites).
+SharePoint multilingual feature is available only for Communicaion Sites (not for Team Sites).
 
 # License
 
